@@ -8,9 +8,10 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEd
 
 SCREEN_SIZE = [600, 500]
 api_server = "http://static-maps.yandex.ru/1.x/"
+
 # 37.530887 55.703118
-# 54.195105 37.620373
-# 55.755241 37.617779
+# 37.620373 54.195105
+# 37.617779 55.755241
 
 
 class Map(QWidget):
