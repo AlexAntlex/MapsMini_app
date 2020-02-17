@@ -30,6 +30,22 @@ class Map(QWidget):
             if __name__ == '__main__':
                 coor = coor.split()
                 return coor
+            
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_PageDown:
+            if float(self.delta) > 0.0:
+                self.delta = str(float(self.delta) - 0.002)
+        if event.key() == Qt.Key_PageUp:
+            if float(self.delta) <= 90.0:
+                self.delta = str(float(self.delta) + 0.002)
+        map_params = {
+            "ll": ",".join([self.lon, self.lat]),
+            "spn": ",".join([self.delta, self.delta]),
+            "l": "map"
+        }
+        self.getImage(map_params)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
     def getImage(self, req):
         response = requests.get(api_server, params=req)
