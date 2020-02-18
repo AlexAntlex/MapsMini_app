@@ -16,11 +16,14 @@ api_server = "http://static-maps.yandex.ru/1.x/"
 class Map(QWidget):
     def __init__(self):
         super().__init__()
+        self.ptlon, self.ptlat = '0.0', '0.0'
+        self.is_pt = False
         self.lon, self.lat = self.get_coord()
+        self.level = 'map'
         self.delta = "0.002"
         self.REQUEST = {"ll": ",".join([self.lon, self.lat]),
                         "spn": ",".join([self.delta, self.delta]),
-                        "l": "map"}
+                        "l": self.level}
         self.getImage(self.REQUEST)
         self.initUI()
 
@@ -39,11 +42,21 @@ class Map(QWidget):
         if event.key() == Qt.Key_PageUp:
             if float(self.delta) <= 90.0:
                 self.delta = str(float(self.delta) + 0.002)
-        map_params = {
-            "ll": ",".join([self.lon, self.lat]),
-            "spn": ",".join([self.delta, self.delta]),
-            "l": "map"
-        }
+                
+        if self.is_pt:
+            map_params = {
+                "ll": ",".join([self.lon, self.lat]),
+                "spn": ",".join([self.delta, self.delta]),
+                "l": self.level,
+                "pt": ",".join([self.ptlon, self.ptlat]) + ",pm2rdm1"
+
+            }
+        else:
+            map_params = {
+                "ll": ",".join([self.lon, self.lat]),
+                "spn": ",".join([self.delta, self.delta]),
+                "l": self.level
+            }
         self.getImage(map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
@@ -69,16 +82,31 @@ class Map(QWidget):
 
         self.name_label = QLabel(self)
         self.name_label.setText("Поиск:")
-        self.name_label.move(220, 472)
+        self.name_label.move(320, 472)
 
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
-        self.btn.move(390, 469)
+        self.btn.move(490, 469)
+        
+        self.btn_sput = QPushButton(self)
+        self.btn_sput.setText("Спутник")
+        self.btn_sput.move(10, 469)
+
+        self.btn_map = QPushButton(self)
+        self.btn_map.setText(" Схема ")
+        self.btn_map.move(110, 469)
+
+        self.btn_gib = QPushButton(self)
+        self.btn_gib.setText("Гибрит")
+        self.btn_gib.move(210, 469)
 
         self.name_input = QLineEdit(self)
-        self.name_input.move(250, 470)
+        self.name_input.move(350, 470)
 
         self.btn.clicked.connect(self.find)
+        self.btn_sput.clicked.connect(self.level_change)
+        self.btn_map.clicked.connect(self.level_change)
+        self.btn_gib.clicked.connect(self.level_change)
 
     def closeEvent(self, event):
         os.remove(self.map_file)
@@ -103,13 +131,41 @@ class Map(QWidget):
         map_params = {
             "ll": ",".join([toponym_longitude, toponym_lattitude]),
             "spn": ",".join([self.delta, self.delta]),
-            "l": "map",
+            "l": self.level,
             "pt": ",".join([toponym_longitude, toponym_lattitude]) + ",pm2rdm1"
         }
+        self.is_pt = True
+        self.lon, self.lat = toponym_longitude, toponym_lattitude
+        self.ptlon, self.ptlat = toponym_longitude, toponym_lattitude
         self.getImage(map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
+    def level_change(self):
+        if self.btn_sput:
+            self.level = 'sat'
+        if self.btn_map:
+            self.level = 'map'
+        if self.btn_gib:
+            self.level = 'sat,skl'
+
+        if self.is_pt:
+            map_params = {
+                "ll": ",".join([self.lon, self.lat]),
+                "spn": ",".join([self.delta, self.delta]),
+                "l": self.level,
+                "pt": ",".join([self.ptlon, self.ptlat]) + ",pm2rdm1"
+
+            }
+        else:
+            map_params = {
+                "ll": ",".join([self.lon, self.lat]),
+                "spn": ",".join([self.delta, self.delta]),
+                "l": self.level
+            }
+        self.getImage(map_params)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
