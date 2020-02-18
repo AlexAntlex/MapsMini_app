@@ -2,12 +2,14 @@ import os
 import sys
 
 import requests
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt as core
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton
 
 SCREEN_SIZE = [600, 500]
 api_server = "http://static-maps.yandex.ru/1.x/"
+unch_coor = []
+
 # 37.530887 55.703118
 # 54.195105 37.620373
 # 55.755241 37.617779
@@ -18,10 +20,10 @@ class Map(QWidget):
         super().__init__()
         self.ptlon, self.ptlat = '0.0', '0.0'
         self.is_pt = False
-        self.lon, self.lat = self.get_coord()
+        self.coordinate = self.get_coord()
         self.level = 'map'
         self.delta = "0.002"
-        self.REQUEST = {"ll": ",".join([self.lon, self.lat]),
+        self.REQUEST = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
                         "spn": ",".join([self.delta, self.delta]),
                         "l": self.level}
         self.getImage(self.REQUEST)
@@ -34,30 +36,39 @@ class Map(QWidget):
             if __name__ == '__main__':
                 coor = coor.split()
                 return coor
-            
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_PageDown:
-            if float(self.delta) > 0.0:
-                self.delta = str(float(self.delta) - 0.002)
-        if event.key() == Qt.Key_PageUp:
+
+    def keyPressEvent(self, e):
+        global unch_coor
+        if e.key() == core.Key_Down:
+            self.coordinate[1] = str(float(self.coordinate[1]) - 0.0003)
+
+        if e.key() == core.Key_Up:
+            self.coordinate[1] = str(float(self.coordinate[1]) + 0.0003)
+
+        if e.key() == core.Key_Left:
+            self.coordinate[0] = str(float(self.coordinate[0]) - 0.0003)
+
+        if e.key() == core.Key_Right:
+            self.coordinate[0] = str(float(self.coordinate[0]) + 0.0003)
+
+        if e.key() == core.Key_PageDown:
             if float(self.delta) <= 90.0:
                 self.delta = str(float(self.delta) + 0.002)
-                
-        if self.is_pt:
-            map_params = {
-                "ll": ",".join([self.lon, self.lat]),
-                "spn": ",".join([self.delta, self.delta]),
-                "l": self.level,
-                "pt": ",".join([self.ptlon, self.ptlat]) + ",pm2rdm1"
 
-            }
+        if e.key() == core.Key_PageUp:
+            if float(self.delta) > 0.0:
+                self.delta = str(float(self.delta) - 0.002)
+
+        if unch_coor != []:
+            self.getImage({"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": "map",
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
         else:
-            map_params = {
-                "ll": ",".join([self.lon, self.lat]),
-                "spn": ",".join([self.delta, self.delta]),
-                "l": self.level
-            }
-        self.getImage(map_params)
+            self.getImage({"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": "map"})
+
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
@@ -87,7 +98,7 @@ class Map(QWidget):
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
         self.btn.move(490, 469)
-        
+
         self.btn_sput = QPushButton(self)
         self.btn_sput.setText("Спутник")
         self.btn_sput.move(10, 469)
@@ -97,7 +108,7 @@ class Map(QWidget):
         self.btn_map.move(110, 469)
 
         self.btn_gib = QPushButton(self)
-        self.btn_gib.setText("Гибрит")
+        self.btn_gib.setText("Гибрид")
         self.btn_gib.move(210, 469)
 
         self.name_input = QLineEdit(self)
@@ -112,6 +123,7 @@ class Map(QWidget):
         os.remove(self.map_file)
 
     def find(self):
+        global unch_coor
         toponym_to_find = str(self.name_input.text())
         geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
         geocoder_params = {
@@ -127,16 +139,14 @@ class Map(QWidget):
         toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
         toponym_coodrinates = toponym["Point"]["pos"]
         toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+        unch_coor = [toponym_longitude, toponym_lattitude]
 
         map_params = {
             "ll": ",".join([toponym_longitude, toponym_lattitude]),
             "spn": ",".join([self.delta, self.delta]),
-            "l": self.level,
+            "l": "map",
             "pt": ",".join([toponym_longitude, toponym_lattitude]) + ",pm2rdm1"
         }
-        self.is_pt = True
-        self.lon, self.lat = toponym_longitude, toponym_lattitude
-        self.ptlon, self.ptlat = toponym_longitude, toponym_lattitude
         self.getImage(map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
@@ -151,7 +161,7 @@ class Map(QWidget):
 
         if self.is_pt:
             map_params = {
-                "ll": ",".join([self.lon, self.lat]),
+                "ll": ",".join([self.coordinate[0], self.coordinate[1]]),
                 "spn": ",".join([self.delta, self.delta]),
                 "l": self.level,
                 "pt": ",".join([self.ptlon, self.ptlat]) + ",pm2rdm1"
@@ -159,13 +169,14 @@ class Map(QWidget):
             }
         else:
             map_params = {
-                "ll": ",".join([self.lon, self.lat]),
+                "ll": ",".join([self.coordinate[0], self.coordinate[1]]),
                 "spn": ",".join([self.delta, self.delta]),
                 "l": self.level
             }
         self.getImage(map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
