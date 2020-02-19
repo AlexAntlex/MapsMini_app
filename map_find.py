@@ -4,15 +4,16 @@ import sys
 import requests
 from PyQt5.QtCore import Qt as core
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton, QRadioButton, \
+    QButtonGroup
 
-SCREEN_SIZE = [600, 500]
+SCREEN_SIZE = [600, 610]
 api_server = "http://static-maps.yandex.ru/1.x/"
 unch_coor = []
 
 # 37.530887 55.703118
-# 54.195105 37.620373
-# 55.755241 37.617779
+# 37.620373 54.195105
+# 37.617779 55.755241
 
 
 class Map(QWidget):
@@ -27,6 +28,9 @@ class Map(QWidget):
                         "spn": ",".join([self.delta, self.delta]),
                         "l": self.level}
         self.getImage(self.REQUEST)
+        self.toponym_address = ''
+        self.toponym_index = ''
+        self.grabli = False
         self.initUI()
 
     def get_coord(self):
@@ -93,7 +97,7 @@ class Map(QWidget):
 
         self.name_label = QLabel(self)
         self.name_label.setText("Поиск:")
-        self.name_label.move(320, 472)
+        self.name_label.move(306, 472)
 
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
@@ -114,10 +118,58 @@ class Map(QWidget):
         self.name_input = QLineEdit(self)
         self.name_input.move(350, 470)
 
+        self.address = QLabel(self)
+        self.address.setText('Адрес объекта: ')
+        self.address.resize(600, 15)
+        self.address.move(10, 500)
+
+        self.yes = QRadioButton(self)
+        self.yes.setText('Да')
+
+        self.yes.move(30, 550)
+
+        self.ind = QLabel(self)
+        self.ind.setText('Отображать почтовый индекс:')
+        self.ind.move(10, 530)
+
+        self.no = QRadioButton(self)
+        self.no.setChecked(True)
+        self.no.setText('Нет')
+        self.no.move(30, 570)
+
+        self.no_ind = QLabel(self)
+        self.no_ind.move(10, 590)
+        self.no_ind.resize(600, 15)
+
+        self.button_group = QButtonGroup()
+        self.button_group.addButton(self.yes)
+        self.button_group.addButton(self.no)
+        self.button_group.buttonClicked.connect(self.add_ind_clicked)
+
         self.btn.clicked.connect(self.find)
         self.btn_sput.clicked.connect(self.level_change)
         self.btn_map.clicked.connect(self.level_change)
         self.btn_gib.clicked.connect(self.level_change)
+
+    def add_ind_clicked(self, bttn):
+        if bttn.text() == 'Да':
+            self.grabli = True
+        else:
+            self.grabli = False
+        self.print_address()
+
+    def print_address(self):
+        if self.grabli:
+            if self.toponym_index != '':
+                self.no_ind.setText('')
+                self.address.setText('Адрес объекта: ' + self.toponym_address + self.toponym_index)
+            else:
+                self.no_ind.setText('К сожалению, невозможно отобразить индекс')
+        else:
+            self.address.setText('Адрес объекта: ' + self.toponym_address)
+
+            self.address.setText('Адрес объекта: ' + self.toponym_address)
+            self.no_ind.setText('')
 
     def closeEvent(self, event):
         os.remove(self.map_file)
@@ -140,6 +192,12 @@ class Map(QWidget):
         toponym_coodrinates = toponym["Point"]["pos"]
         toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
         unch_coor = [toponym_longitude, toponym_lattitude]
+        self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
+        try:
+            self.toponym_index = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
+        except KeyError:
+            self.toponym_index = ''
+        self.print_address()
 
         map_params = {
             "ll": ",".join([toponym_longitude, toponym_lattitude]),
