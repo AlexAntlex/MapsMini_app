@@ -11,10 +11,6 @@ SCREEN_SIZE = [600, 610]
 api_server = "http://static-maps.yandex.ru/1.x/"
 unch_coor = []
 
-# 37.530887 55.703118
-# 37.620373 54.195105
-# 37.617779 55.755241
-
 
 class Map(QWidget):
     def __init__(self):
@@ -25,10 +21,10 @@ class Map(QWidget):
         self.toponym_longitude, self.toponym_lattitude = self.coordinate
         self.level = 'map'
         self.delta = "0.002"
-        self.REQUEST = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+        self.map_params = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
                         "spn": ",".join([self.delta, self.delta]),
                         "l": self.level}
-        self.getImage(self.REQUEST)
+        self.getImage(self.map_params)
         self.toponym_address = ''
         self.toponym_index = ''
         self.grabli = False
@@ -200,39 +196,21 @@ class Map(QWidget):
             self.toponym_index = ''
         self.print_address()
 
-        map_params = {
-            "ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
-            "spn": ",".join([self.delta, self.delta]),
-            "l": self.level,
-            "pt": ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
-        }
-        self.getImage(map_params)
+        self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
+        self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
+        self.getImage(self.map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
     def level_change(self):
         if self.btn_sput:
-            self.level = 'sat'
+            self.map_params["l"] = "sat"
         if self.btn_map:
-            self.level = 'map'
+            self.map_params["l"] = "map"
         if self.btn_gib:
-            self.level = 'sat,skl'
+            self.map_params["l"] = "sat,skl"
 
-        if self.is_pt:
-            map_params = {
-                "ll": ",".join([self.coordinate[0], self.coordinate[1]]),
-                "spn": ",".join([self.delta, self.delta]),
-                "l": self.level,
-                "pt": ",".join([self.ptlon, self.ptlat]) + ",pm2rdm1"
-
-            }
-        else:
-            map_params = {
-                "ll": ",".join([self.coordinate[0], self.coordinate[1]]),
-                "spn": ",".join([self.delta, self.delta]),
-                "l": self.level
-            }
-        self.getImage(map_params)
+        self.getImage(self.map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
