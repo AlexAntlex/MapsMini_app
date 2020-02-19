@@ -22,6 +22,7 @@ class Map(QWidget):
         self.ptlon, self.ptlat = '0.0', '0.0'
         self.is_pt = False
         self.coordinate = self.get_coord()
+        self.toponym_longitude, self.toponym_lattitude = self.coordinate
         self.level = 'map'
         self.delta = "0.002"
         self.REQUEST = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
@@ -44,16 +45,16 @@ class Map(QWidget):
     def keyPressEvent(self, e):
         global unch_coor
         if e.key() == core.Key_Down:
-            self.coordinate[1] = str(float(self.coordinate[1]) - 0.0003)
+            self.toponym_lattitude = str(float(self.toponym_lattitude) - 0.0003)
 
         if e.key() == core.Key_Up:
-            self.coordinate[1] = str(float(self.coordinate[1]) + 0.0003)
+            self.toponym_lattitude = str(float(self.toponym_lattitude) + 0.0003)
 
         if e.key() == core.Key_Left:
-            self.coordinate[0] = str(float(self.coordinate[0]) - 0.0003)
+            self.toponym_longitude = str(float(self.toponym_longitude) - 0.0003)
 
         if e.key() == core.Key_Right:
-            self.coordinate[0] = str(float(self.coordinate[0]) + 0.0003)
+            self.toponym_longitude = str(float(self.toponym_longitude) + 0.0003)
 
         if e.key() == core.Key_PageDown:
             if float(self.delta) <= 90.0:
@@ -64,14 +65,14 @@ class Map(QWidget):
                 self.delta = str(float(self.delta) - 0.002)
 
         if unch_coor != []:
-            self.getImage({"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
                            "spn": ",".join([self.delta, self.delta]),
-                           "l": "map",
+                           "l": self.level,
                            "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
         else:
-            self.getImage({"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
                            "spn": ",".join([self.delta, self.delta]),
-                           "l": "map"})
+                           "l": self.level})
 
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
@@ -190,8 +191,8 @@ class Map(QWidget):
         json_response = response.json()
         toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
         toponym_coodrinates = toponym["Point"]["pos"]
-        toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
-        unch_coor = [toponym_longitude, toponym_lattitude]
+        self.toponym_longitude, self.toponym_lattitude = toponym_coodrinates.split(" ")
+        unch_coor = [self.toponym_longitude, self.toponym_lattitude]
         self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
         try:
             self.toponym_index = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
@@ -200,10 +201,10 @@ class Map(QWidget):
         self.print_address()
 
         map_params = {
-            "ll": ",".join([toponym_longitude, toponym_lattitude]),
+            "ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
             "spn": ",".join([self.delta, self.delta]),
-            "l": "map",
-            "pt": ",".join([toponym_longitude, toponym_lattitude]) + ",pm2rdm1"
+            "l": self.level,
+            "pt": ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
         }
         self.getImage(map_params)
         self.pixmap = QPixmap(self.map_file)
