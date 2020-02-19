@@ -5,7 +5,7 @@ import requests
 from PyQt5.QtCore import Qt as core
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton, QRadioButton, \
-    QButtonGroup
+    QButtonGroup, QMessageBox
 
 SCREEN_SIZE = [600, 610]
 api_server = "http://static-maps.yandex.ru/1.x/"
@@ -22,8 +22,8 @@ class Map(QWidget):
         self.level = 'map'
         self.delta = "0.002"
         self.map_params = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
-                        "spn": ",".join([self.delta, self.delta]),
-                        "l": self.level}
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level}
         self.getImage(self.map_params)
         self.toponym_address = ''
         self.toponym_index = ''
@@ -34,9 +34,16 @@ class Map(QWidget):
         coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
                                                   "Введите координаты через пробел")
         if okBtnPressed:
-            if __name__ == '__main__':
-                coor = coor.split()
-                return coor
+            while len(coor.split()) != 2:
+                self.error()
+                coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
+                                                          "Введите координаты через пробел")
+            else:
+                if __name__ == '__main__':
+                    coor = coor.split()
+                    return coor
+        else:
+            sys.exit(1)
 
     def keyPressEvent(self, e):
         global unch_coor
@@ -99,10 +106,10 @@ class Map(QWidget):
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
         self.btn.move(490, 469)
-        
+
         self.btnsb = QPushButton(self)
         self.btnsb.setText("Сброс")
-        self.btnsb.move(490, 500)
+        self.btnsb.move(490, 550)
 
         self.btn_sput = QPushButton(self)
         self.btn_sput.setText("Спутник")
@@ -187,25 +194,35 @@ class Map(QWidget):
         response = requests.get(geocoder_api_server, params=geocoder_params)
 
         if not response:
-            pass
-
-        json_response = response.json()
-        toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-        toponym_coodrinates = toponym["Point"]["pos"]
-        self.toponym_longitude, self.toponym_lattitude = toponym_coodrinates.split(" ")
-        unch_coor = [self.toponym_longitude, self.toponym_lattitude]
-        self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
+            sys.exit(1)
         try:
-            self.toponym_index = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
-        except KeyError:
-            self.toponym_index = ''
-        self.print_address()
+            json_response = response.json()
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            toponym_coodrinates = toponym["Point"]["pos"]
+            self.toponym_longitude, self.toponym_lattitude = toponym_coodrinates.split(" ")
+            unch_coor = [self.toponym_longitude, self.toponym_lattitude]
+            self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
+            try:
+                self.toponym_index = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
+            except KeyError:
+                self.toponym_index = ''
+            self.print_address()
 
-        self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
-        self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
-        self.getImage(self.map_params)
-        self.pixmap = QPixmap(self.map_file)
-        self.image.setPixmap(self.pixmap)
+            self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
+            self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
+            self.getImage(self.map_params)
+            self.pixmap = QPixmap(self.map_file)
+            self.image.setPixmap(self.pixmap)
+        except IndexError:
+           self.error()
+           self.name_input.setText('')
+
+    def error(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle('Error')
+        msg.setText('Упс... Что-то пошло не так. Попробуйте ещё раз.')
+        msg.exec_()
 
     def level_change(self):
         if self.btn_sput:
@@ -218,14 +235,14 @@ class Map(QWidget):
         self.getImage(self.map_params)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
-        
+
     def sbros(self):
         global unch_coor
         unch_coor = []
         self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
                        "spn": ",".join([self.delta, self.delta]),
                        "l": self.level})
-
+        self.name_input.setText('')
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
