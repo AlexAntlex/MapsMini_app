@@ -99,6 +99,10 @@ class Map(QWidget):
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
         self.btn.move(490, 469)
+        
+        self.btnsb = QPushButton(self)
+        self.btnsb.setText("Сброс")
+        self.btnsb.move(490, 500)
 
         self.btn_sput = QPushButton(self)
         self.btn_sput.setText("Спутник")
@@ -144,6 +148,7 @@ class Map(QWidget):
         self.button_group.buttonClicked.connect(self.add_ind_clicked)
 
         self.btn.clicked.connect(self.find)
+        self.btnsb.clicked.connect(self.sbros)
         self.btn_sput.clicked.connect(self.level_change)
         self.btn_map.clicked.connect(self.level_change)
         self.btn_gib.clicked.connect(self.level_change)
@@ -211,6 +216,16 @@ class Map(QWidget):
             self.map_params["l"] = "sat,skl"
 
         self.getImage(self.map_params)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
+        
+    def sbros(self):
+        global unch_coor
+        unch_coor = []
+        self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                       "spn": ",".join([self.delta, self.delta]),
+                       "l": self.level})
+
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
