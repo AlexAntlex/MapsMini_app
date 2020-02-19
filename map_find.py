@@ -48,16 +48,16 @@ class Map(QWidget):
     def keyPressEvent(self, e):
         global unch_coor
         if e.key() == core.Key_Down:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) - 0.0003)
+            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta))
 
         if e.key() == core.Key_Up:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) + 0.0003)
+            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta))
 
         if e.key() == core.Key_Left:
-            self.toponym_longitude = str(float(self.toponym_longitude) - 0.0003)
+            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta))
 
         if e.key() == core.Key_Right:
-            self.toponym_longitude = str(float(self.toponym_longitude) + 0.0003)
+            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta))
 
         if e.key() == core.Key_PageDown:
             if float(self.delta) <= 90.0:
