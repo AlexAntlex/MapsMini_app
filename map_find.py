@@ -83,7 +83,7 @@ class Map(QWidget):
     def getImage(self, req):
         response = requests.get(api_server, params=req)
         if not response:
-            pass
+            sys.exit(1)
 
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
