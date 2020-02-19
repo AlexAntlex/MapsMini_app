@@ -225,14 +225,28 @@ class Map(QWidget):
         msg.exec_()
 
     def level_change(self):
-        if self.btn_sput:
+        global unch_coor
+        if self.sender() is self.btn_sput:
             self.map_params["l"] = "sat"
-        if self.btn_map:
+            self.level = 'sat'
+        if self.sender() is self.btn_map:
             self.map_params["l"] = "map"
-        if self.btn_gib:
+            self.level = 'map'
+        if self.sender() is self.btn_gib:
+            self.level = 'sat,skl'
             self.map_params["l"] = "sat,skl"
 
-        self.getImage(self.map_params)
+
+        if unch_coor != []:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level,
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+        else:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level})
+
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
