@@ -173,9 +173,9 @@ class Map(QWidget):
             self.address.setText('Адрес объекта: ' + self.toponym_address)
             self.no_ind.setText('')
 
-    def find(self):
+    def adres(self, coor):
         global unch_coor
-        toponym_to_find = str(self.name_input.text())
+        toponym_to_find = coor
         geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
         geocoder_params = {
             "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
@@ -198,14 +198,35 @@ class Map(QWidget):
                 self.toponym_index = ''
             self.print_address()
 
-            self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
-            self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
-            self.getImage(self.map_params)
-            self.pixmap = QPixmap(self.map_file)
-            self.image.setPixmap(self.pixmap)
         except IndexError:
-           self.error()
-           self.name_input.setText('')
+            self.error()
+            self.name_input.setText('')
+
+    def find(self):
+        toponym_to_find = str(self.name_input.text())
+        geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+        geocoder_params = {
+            "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+            "geocode": toponym_to_find,
+            "format": "json"}
+        response = requests.get(geocoder_api_server, params=geocoder_params)
+
+        if not response:
+            sys.exit(1)
+        json_response = response.json()
+        toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+        toponym_coodrinates = toponym["Point"]["pos"]
+        self.toponym_longitude, self.toponym_lattitude = toponym_coodrinates.split(" ")
+        self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
+
+        self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
+        self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
+
+        self.getImage(self.map_params)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
+
+        self.adres(str(self.name_input.text()))
 
     def error(self):
         msg = QMessageBox()
@@ -267,11 +288,13 @@ class Map(QWidget):
 
         unch_coor = [str(self.x), str(self.y)]
         self.sbros()
-        self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
-                       "spn": ",".join([self.delta, self.delta]),
-                       "l": self.level,
-                       "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+        self.map_params = {"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level,
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"}
+        self.getImage(self.map_params)
 
+        self.adres(self.map_params.get("ll"))
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
