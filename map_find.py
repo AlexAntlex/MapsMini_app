@@ -4,47 +4,90 @@ import sys
 import requests
 from PyQt5.QtCore import Qt as core
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QInputDialog, QLineEdit, QPushButton, QRadioButton, \
+    QButtonGroup, QMessageBox
 
-SCREEN_SIZE = [600, 500]
+SCREEN_SIZE = [600, 610]
 api_server = "http://static-maps.yandex.ru/1.x/"
-
-# 37.530887 55.703118
-# 37.620373 54.195105
-# 37.617779 55.755241
+unch_coor = []
 
 
 class Map(QWidget):
     def __init__(self):
         super().__init__()
+        self.ptlon, self.ptlat = '0.0', '0.0'
+        self.is_pt = False
         self.coordinate = self.get_coord()
+        self.toponym_longitude, self.toponym_lattitude = self.coordinate
+        self.level = 'map'
         self.delta = "0.002"
-        self.REQUEST = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
-                        "spn": ",".join([self.delta, self.delta]),
-                        "l": "map"}
-        self.getImage(self.REQUEST)
+        self.alpha = 1
+        self.coor_click = []
+        self.map_params = {"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level}
+        self.getImage(self.map_params)
+        self.toponym_address = ''
+        self.toponym_index = ''
+        self.grabli = False
         self.initUI()
-
-    def get_coord(self):
-        coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
-                                               "Введите координаты через пробел")
-        if okBtnPressed:
-            if __name__ == '__main__':
-                coor = coor.split()
-                return coor
 
     def get_coord(self):
         coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
                                                   "Введите координаты через пробел")
         if okBtnPressed:
-            if __name__ == '__main__':
-                coor = coor.split()
-                return coor
+            while len(coor.split()) != 2:
+                self.error()
+                coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
+                                                          "Введите координаты через пробел")
+            else:
+                if __name__ == '__main__':
+                    coor = coor.split()
+                    return coor
+        else:
+            sys.exit(1)
+
+    def keyPressEvent(self, e):
+        global unch_coor
+        if e.key() == core.Key_Down:
+            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta))
+
+        if e.key() == core.Key_Up:
+            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta))
+
+        if e.key() == core.Key_Left:
+            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta))
+
+        if e.key() == core.Key_Right:
+            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta))
+
+        if e.key() == core.Key_PageDown:
+            if float(self.delta) <= 90.0:
+                self.delta = str(float(self.delta) + 0.002)
+                self.alpha += 1
+
+        if e.key() == core.Key_PageUp:
+            if float(self.delta) > 0.0:
+                self.delta = str(float(self.delta) - 0.002)
+                self.alpha -= 1
+
+        if unch_coor != []:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level,
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+        else:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level})
+
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
     def getImage(self, req):
         response = requests.get(api_server, params=req)
         if not response:
-            pass
+            sys.exit(1)
 
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
@@ -62,21 +105,90 @@ class Map(QWidget):
 
         self.name_label = QLabel(self)
         self.name_label.setText("Поиск:")
-        self.name_label.move(220, 472)
+        self.name_label.move(306, 472)
 
         self.btn = QPushButton(self)
         self.btn.setText("Найти")
-        self.btn.move(390, 469)
+        self.btn.move(490, 469)
+
+        self.btnsb = QPushButton(self)
+        self.btnsb.setText("Сброс")
+        self.btnsb.move(490, 550)
+
+        self.btn_sput = QPushButton(self)
+        self.btn_sput.setText("Спутник")
+        self.btn_sput.move(10, 469)
+
+        self.btn_map = QPushButton(self)
+        self.btn_map.setText(" Схема ")
+        self.btn_map.move(110, 469)
+
+        self.btn_gib = QPushButton(self)
+        self.btn_gib.setText("Гибрид")
+        self.btn_gib.move(210, 469)
 
         self.name_input = QLineEdit(self)
-        self.name_input.move(250, 470)
+        self.name_input.move(350, 470)
+
+        self.address = QLabel(self)
+        self.address.setText('Адрес объекта: ')
+        self.address.resize(600, 15)
+        self.address.move(10, 500)
+
+        self.yes = QRadioButton(self)
+        self.yes.setText('Да')
+
+        self.yes.move(30, 550)
+
+        self.ind = QLabel(self)
+        self.ind.setText('Отображать почтовый индекс:')
+        self.ind.move(10, 530)
+
+        self.no = QRadioButton(self)
+        self.no.setChecked(True)
+        self.no.setText('Нет')
+        self.no.move(30, 570)
+
+        self.no_ind = QLabel(self)
+        self.no_ind.move(10, 590)
+        self.no_ind.resize(600, 15)
+
+        self.button_group = QButtonGroup()
+        self.button_group.addButton(self.yes)
+        self.button_group.addButton(self.no)
+        self.button_group.buttonClicked.connect(self.add_ind_clicked)
 
         self.btn.clicked.connect(self.find)
+        self.btnsb.clicked.connect(self.sbros)
+        self.btn_sput.clicked.connect(self.level_change)
+        self.btn_map.clicked.connect(self.level_change)
+        self.btn_gib.clicked.connect(self.level_change)
+
+    def add_ind_clicked(self, bttn):
+        if bttn.text() == 'Да':
+            self.grabli = True
+        else:
+            self.grabli = False
+        self.print_address()
+
+    def print_address(self):
+        if self.grabli:
+            if self.toponym_index != '':
+                self.no_ind.setText('')
+                self.address.setText('Адрес объекта: ' + self.toponym_address + self.toponym_index)
+            else:
+                self.no_ind.setText('К сожалению, невозможно отобразить индекс')
+        else:
+            self.address.setText('Адрес объекта: ' + self.toponym_address)
+
+            self.address.setText('Адрес объекта: ' + self.toponym_address)
+            self.no_ind.setText('')
 
     def closeEvent(self, event):
         os.remove(self.map_file)
 
     def find(self):
+        global unch_coor
         toponym_to_find = str(self.name_input.text())
         geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
         geocoder_params = {
@@ -86,47 +198,91 @@ class Map(QWidget):
         response = requests.get(geocoder_api_server, params=geocoder_params)
 
         if not response:
-            pass
+            sys.exit(1)
+        try:
+            json_response = response.json()
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            toponym_coodrinates = toponym["Point"]["pos"]
+            self.toponym_longitude, self.toponym_lattitude = toponym_coodrinates.split(" ")
+            unch_coor = [self.toponym_longitude, self.toponym_lattitude]
+            self.toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['formatted']
+            try:
+                self.toponym_index = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
+            except KeyError:
+                self.toponym_index = ''
+            self.print_address()
 
-        json_response = response.json()
-        toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-        toponym_coodrinates = toponym["Point"]["pos"]
-        toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+            self.map_params["pt"] = ",".join([self.toponym_longitude, self.toponym_lattitude]) + ",pm2rdm1"
+            self.map_params["ll"] = ",".join([self.toponym_longitude, self.toponym_lattitude])
+            self.getImage(self.map_params)
+            self.pixmap = QPixmap(self.map_file)
+            self.image.setPixmap(self.pixmap)
+        except IndexError:
+           self.error()
+           self.name_input.setText('')
 
-        map_params = {
-            "ll": ",".join([toponym_longitude, toponym_lattitude]),
-            "spn": ",".join([self.delta, self.delta]),
-            "l": "map",
-            "pt": ",".join([toponym_longitude, toponym_lattitude]) + ",pm2rdm1"
-        }
-        self.getImage(map_params)
+    def error(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle('Error')
+        msg.setText('Упс... Что-то пошло не так. Попробуйте ещё раз.')
+        msg.exec_()
+
+    def level_change(self):
+        global unch_coor
+        if self.sender() is self.btn_sput:
+            self.map_params["l"] = "sat"
+            self.level = 'sat'
+        if self.sender() is self.btn_map:
+            self.map_params["l"] = "map"
+            self.level = 'map'
+        if self.sender() is self.btn_gib:
+            self.level = 'sat,skl'
+            self.map_params["l"] = "sat,skl"
+
+
+        if unch_coor != []:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level,
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+        else:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level})
+
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
-    def keyPressEvent(self, e):
-        if e.key() == core.Key_S:
-            self.coordinate[1] = str(float(self.coordinate[1]) - 0.0003)
+    def sbros(self):
+        global unch_coor
+        unch_coor = []
+        self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                       "spn": ",".join([self.delta, self.delta]),
+                       "l": self.level})
+        self.name_input.setText('')
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
-        if e.key() == core.Key_W:
-            self.coordinate[1] = str(float(self.coordinate[1]) + 0.0003)
+    def mousePressEvent(self, event):
+        self.coor_click_x = int(event.x())
+        self.coor_click_y = int(event.y())
+        if (event.button() == core.LeftButton):
+            print("Левая")
+        elif (event.button() == core.RightButton):
+            print("Правая")
+        self.coords_by_click()
 
-        if e.key() == core.Key_A:
-            self.coordinate[0] = str(float(self.coordinate[0]) - 0.0003)
-            print('ok')
-
-        if e.key() == core.Key_D:
-            self.coordinate[0] = str(float(self.coordinate[0]) + 0.0003)
-
-        if e.key() == core.Key_PageDown:
-            self.delta = str(float(self.delta) + 0.002)
-            
-        if e.key() == core.Key_PageUp:
-            self.delta = str(float(self.delta) - 0.002)
-
-
-        self.getImage({"ll": ",".join([self.coordinate[0], self.coordinate[1]]),
-                        "spn": ",".join([self.delta, self.delta]),
-                        "l": "map"})
+    def coords_by_click(self):
+        self.center = 300, 225
+        self.x = self.coor_click_x**float(self.delta) + float(self.toponym_longitude) - 300**float(self.delta)
+        self.y = self.coor_click_y**float(self.delta) + float(self.toponym_lattitude) - 225**float(self.delta)
+        print(self.x, self.y, self.alpha)
+        unch_coor = [str(self.x), str(self.y)]
+        self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                       "spn": ",".join([self.delta, self.delta]),
+                       "l": self.level,
+                       "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
