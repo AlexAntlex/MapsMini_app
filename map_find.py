@@ -17,7 +17,7 @@ class Map(QWidget):
         super().__init__()
         self.ptlon, self.ptlat = '0.0', '0.0'
         self.is_pt = False
-        self.coordinate = self.get_coord()
+        self.coordinate = '37.620373', '54.195105'
         self.toponym_longitude, self.toponym_lattitude = self.coordinate
         self.level = 'map'
         self.delta = "0.002"
@@ -31,67 +31,6 @@ class Map(QWidget):
         self.toponym_index = ''
         self.grabli = False
         self.initUI()
-
-    def get_coord(self):
-        coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
-                                                  "Введите координаты через пробел")
-        if okBtnPressed:
-            while len(coor.split()) != 2:
-                self.error()
-                coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
-                                                          "Введите координаты через пробел")
-            else:
-                if __name__ == '__main__':
-                    coor = coor.split()
-                    return coor
-        else:
-            sys.exit(1)
-
-    def keyPressEvent(self, e):
-        global unch_coor
-        if e.key() == core.Key_Down:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta))
-
-        if e.key() == core.Key_Up:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta))
-
-        if e.key() == core.Key_Left:
-            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta))
-
-        if e.key() == core.Key_Right:
-            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta))
-
-        if e.key() == core.Key_PageDown:
-            if float(self.delta) <= 90.0:
-                self.delta = str(float(self.delta) + 0.002)
-                self.alpha += 1
-
-        if e.key() == core.Key_PageUp:
-            if float(self.delta) > 0.0:
-                self.delta = str(float(self.delta) - 0.002)
-                self.alpha -= 1
-
-        if unch_coor != []:
-            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
-                           "spn": ",".join([self.delta, self.delta]),
-                           "l": self.level,
-                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
-        else:
-            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
-                           "spn": ",".join([self.delta, self.delta]),
-                           "l": self.level})
-
-        self.pixmap = QPixmap(self.map_file)
-        self.image.setPixmap(self.pixmap)
-
-    def getImage(self, req):
-        response = requests.get(api_server, params=req)
-        if not response:
-            sys.exit(1)
-
-        self.map_file = "map.png"
-        with open(self.map_file, "wb") as file:
-            file.write(response.content)
 
     def initUI(self):
         self.setGeometry(100, 100, *SCREEN_SIZE)
@@ -164,6 +103,56 @@ class Map(QWidget):
         self.btn_map.clicked.connect(self.level_change)
         self.btn_gib.clicked.connect(self.level_change)
 
+    def keyPressEvent(self, e):
+        global unch_coor
+        if e.key() == core.Key_Down:
+            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta)*1.5)
+
+        if e.key() == core.Key_Up:
+            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta)*1.5)
+
+        if e.key() == core.Key_Left:
+            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta)*3.2)
+
+        if e.key() == core.Key_Right:
+            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta)*3.2)
+
+        if e.key() == core.Key_PageDown:
+            if float(self.delta) <= 90.0:
+                self.delta = str(float(self.delta) + 0.002)
+                self.alpha += 1
+
+        if e.key() == core.Key_PageUp:
+            if float(self.delta) > 0.0:
+                self.delta = str(float(self.delta) - 0.002)
+                self.alpha -= 1
+
+        if unch_coor != []:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level,
+                           "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+        else:
+            self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
+                           "spn": ",".join([self.delta, self.delta]),
+                           "l": self.level})
+
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
+
+    def getImage(self, req):
+        response = requests.get(api_server, params=req)
+
+        if not response:
+            sys.exit(1)
+
+        self.map_file = "map.png"
+        with open(self.map_file, "wb") as file:
+            file.write(response.content)
+
+    def closeEvent(self, event):
+        os.remove(self.map_file)
+
     def add_ind_clicked(self, bttn):
         if bttn.text() == 'Да':
             self.grabli = True
@@ -183,9 +172,6 @@ class Map(QWidget):
 
             self.address.setText('Адрес объекта: ' + self.toponym_address)
             self.no_ind.setText('')
-
-    def closeEvent(self, event):
-        os.remove(self.map_file)
 
     def find(self):
         global unch_coor
@@ -240,7 +226,6 @@ class Map(QWidget):
             self.level = 'sat,skl'
             self.map_params["l"] = "sat,skl"
 
-
         if unch_coor != []:
             self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
                            "spn": ",".join([self.delta, self.delta]),
@@ -276,13 +261,17 @@ class Map(QWidget):
     def coords_by_click(self):
         self.center = 300, 225
         self.x = self.coor_click_x**float(self.delta) + float(self.toponym_longitude) - 300**float(self.delta)
-        self.y = self.coor_click_y**float(self.delta) + float(self.toponym_lattitude) - 225**float(self.delta)
+        self.y = float(self.toponym_lattitude) - self.coor_click_y**float(self.delta) + 225**float(self.delta)
+
         print(self.x, self.y, self.alpha)
+
         unch_coor = [str(self.x), str(self.y)]
+        self.sbros()
         self.getImage({"ll": ",".join([self.toponym_longitude, self.toponym_lattitude]),
                        "spn": ",".join([self.delta, self.delta]),
                        "l": self.level,
                        "pt": ",".join([unch_coor[0], unch_coor[1]]) + ",pm2rdm1"})
+
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
 
