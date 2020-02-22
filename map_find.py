@@ -17,7 +17,7 @@ class Map(QWidget):
         super().__init__()
         self.ptlon, self.ptlat = '0.0', '0.0'
         self.is_pt = False
-        self.coordinate = self.get_coord()
+        self.coordinate = '37.620373', '54.195105'
         self.toponym_longitude, self.toponym_lattitude = self.coordinate
         self.level = 'map'
         self.delta = "0.002"
@@ -29,35 +29,20 @@ class Map(QWidget):
         self.toponym_index = ''
         self.grabli = False
         self.initUI()
-
-    def get_coord(self):
-        coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
-                                                  "Введите координаты через пробел")
-        if okBtnPressed:
-            while len(coor.split()) != 2:
-                self.error()
-                coor, okBtnPressed = QInputDialog.getText(self, "Координаты",
-                                                          "Введите координаты через пробел")
-            else:
-                if __name__ == '__main__':
-                    coor = coor.split()
-                    return coor
-        else:
-            sys.exit(1)
-
+        
     def keyPressEvent(self, e):
         global unch_coor
-        if e.key() == core.Key_Down:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta))
+         if e.key() == core.Key_Down:
+            self.toponym_lattitude = str(float(self.toponym_lattitude) - float(self.delta)*1.5)
 
         if e.key() == core.Key_Up:
-            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta))
+            self.toponym_lattitude = str(float(self.toponym_lattitude) + float(self.delta)*1.5)
 
         if e.key() == core.Key_Left:
-            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta))
+            self.toponym_longitude = str(float(self.toponym_longitude) - float(self.delta)*3.2)
 
         if e.key() == core.Key_Right:
-            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta))
+            self.toponym_longitude = str(float(self.toponym_longitude) + float(self.delta)*3.2)
 
         if e.key() == core.Key_PageDown:
             if float(self.delta) <= 90.0:
